@@ -1,7 +1,7 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const port = process.env.PORT || 5000;
 
@@ -28,9 +28,17 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
-    const menuCollection = client.db("kotomDb").collection("menu")
-    const reviewCollection = client.db("kotomDb").collection("reviews")
-    const cartCollection = client.db("kotomDb").collection("carts")
+    const userCollection = client.db("kotomDb").collection("users");
+    const menuCollection = client.db("kotomDb").collection("menu");
+    const reviewCollection = client.db("kotomDb").collection("reviews");
+    const cartCollection = client.db("kotomDb").collection("carts");
+
+    // users related api
+    app.post('/users', async(req, res)=>{
+      const user = req.body;
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    })
 
     app.get('/menu', async(req, res) =>{
         const result = await menuCollection.find().toArray();
@@ -44,7 +52,9 @@ async function run() {
     
     // carts collection
     app.get('/carts', async(req, res)=>{
-      const result = await cartCollection.find().toArray();
+      const email = req.query.email;
+      const query ={email: email}
+      const result = await cartCollection.find(query).toArray();
       res.send(result);
     })
     app.post('/carts', async(req, res)=>{
@@ -52,6 +62,16 @@ async function run() {
       const result = await cartCollection.insertOne(cartItem);
       res.send(result);
     })
+    app.delete('/carts/:id', async(req, res)=>{
+      const id = req.params.id;
+      console.log(id);
+      const query = { _id: new ObjectId(id)}
+      const result = await cartCollection.deleteOne(query);
+      res.send(result);
+      console.log(result);
+    })
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
@@ -77,8 +97,4 @@ app.listen(port, ()=>{
  * --------------------
  * app.get('/users')
  * app.get('/users/:id')
- * app.post('/users')
- * app.put('/users/:id')
- * app.patch('/users/:id')
- * app.delete('/users?:id')
  * */
